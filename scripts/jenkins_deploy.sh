@@ -25,3 +25,13 @@ if [ "$DEPLOY_REGION" = "UK" ]; then
   #Se invoca el deployment con la version"
   $EB_CLI_HOME/eb deploy -l "PSP Server $DEPLOY_VERSION #$BUILD_ID - $GIT_COMMIT"
 fi
+
+if [ "$DEPLOY_REGION" = "DEMO" ]; then
+#El eb-cli debe ser invocado desde el directorio de deployments
+cd $WAR_DIR
+#status
+$EB_CLI_HOME/eb status
+echo "Esta versión seria deployada ${DEPLOY_VERSION}"
+#Se invoca el deployment con la version"
+$EB_CLI_HOME/eb deploy -l "PSP Server $DEPLOY_VERSION #$BUILD_ID - $GIT_COMMIT"
+fi
