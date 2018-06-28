@@ -127,4 +127,29 @@ public class FamilyController {
                 .listDistinctFamiliesByUser(details, name));
     }
 
+    @GetMapping("/map-info")
+    public ResponseEntity<List<FamilyMapDTO>> getFamilyMapData(
+            @RequestParam(value = "organization_id", required = false)
+            Long organizationId,
+    @RequestParam(value = "country_id", required = false)
+            Long countryId,
+    @RequestParam(value = "city_id", required = false)
+            Long cityId,
+    @RequestParam(value = "free_text", required = false)
+            String name,
+    @RequestParam(value = "application_id", required = false)
+            Long applicationId,
+    @AuthenticationPrincipal UserDetailsDTO user) {
+        FamilyFilterDTO filter = FamilyFilterDTO.builder()
+                .applicationId(applicationId)
+                .organizationId(organizationId)
+                .countryId(countryId)
+                .cityId(cityId)
+                .name(name)
+                .isActive(true)
+                .build();
+        List<FamilyMapDTO> dto = familyMapService.getAllFamyliesMapData(filter, user);
+        return ResponseEntity.ok(dto);
+    }
+
 }

@@ -1,9 +1,13 @@
 package py.org.fundacionparaguaya.pspserver.families.services.impl;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static org.springframework.data.jpa.domain.Specifications.where;
+import static py.org.fundacionparaguaya.pspserver.families.specifications.FamilySpecification.byFilter;
 
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.BeanUtils;
@@ -12,10 +16,15 @@ import org.springframework.stereotype.Service;
 import py.org.fundacionparaguaya.pspserver.common.exceptions.UnknownResourceException;
 import py.org.fundacionparaguaya.pspserver.config.I18n;
 import py.org.fundacionparaguaya.pspserver.families.dtos.FamilyDTO;
+import py.org.fundacionparaguaya.pspserver.families.dtos.FamilyFilterDTO;
 import py.org.fundacionparaguaya.pspserver.families.dtos.FamilyMapDTO;
+import py.org.fundacionparaguaya.pspserver.families.entities.FamilyEntity;
 import py.org.fundacionparaguaya.pspserver.families.mapper.FamilyMapper;
 import py.org.fundacionparaguaya.pspserver.families.repositories.FamilyRepository;
 import py.org.fundacionparaguaya.pspserver.families.services.FamilySnapshotsManager;
+import py.org.fundacionparaguaya.pspserver.network.dtos.ApplicationDTO;
+import py.org.fundacionparaguaya.pspserver.network.dtos.OrganizationDTO;
+import py.org.fundacionparaguaya.pspserver.security.dtos.UserDetailsDTO;
 import py.org.fundacionparaguaya.pspserver.surveys.entities.SnapshotEconomicEntity;
 import py.org.fundacionparaguaya.pspserver.surveys.repositories.SnapshotEconomicRepository;
 import py.org.fundacionparaguaya.pspserver.surveys.repositories.SnapshotIndicatorPriorityRepository;
@@ -116,5 +125,49 @@ public class FamilySnapshotsManagerImpl implements FamilySnapshotsManager {
                     familyRepository.save(family);
                 });
     }
+
+	@Override
+	public List<FamilyMapDTO> getAllFamyliesMapData(FamilyFilterDTO filter, UserDetailsDTO user) {
+		FamilyFilterDTO newFilter = buildFilterFromFilterAndUser(filter, user);
+
+		List<FamilyEntity> entityList = familyRepository
+                .findAll(where(byFilter(newFilter)));
+
+		return buildFamilyMapDTOList(entityList);
+	}
+
+	private List<FamilyMapDTO> buildFamilyMapDTOList(List<FamilyEntity> entityList) {
+		List<FamilyMapDTO> response = new ArrayList<>();
+		for (FamilyEntity family : entityList) {
+			FamilyMapDTO dto = new FamilyMapDTO();
+			BeanUtils.copyProperties(family, dto);
+			dto.setSnapshotIndicators(snapshotService.
+					getLastSnapshotIndicatorsByFamily(family.getFamilyId()));
+			response.add(dto);
+		}
+		return response;
+	}
+
+	private FamilyFilterDTO buildFilterFromFilterAndUser(FamilyFilterDTO fromFilter,
+            UserDetailsDTO userDetails) {
+		Long userAppId = Optional.ofNullable(userDetails.getApplication())
+		       .map(ApplicationDTO::getId)
+		       .orElse(null);
+		
+		Long userOrgId = Optional.ofNullable(userDetails.getOrganization())
+		.map(OrganizationDTO::getId)
+		.orElse(fromFilter.getOrganizationId());
+		
+		return FamilyFilterDTO.builder()
+		.cityId(fromFilter.getCityId())
+		.lastModifiedGt(fromFilter.getLastModifiedGt())
+		.isActive(fromFilter.getIsActive())
+		.name(fromFilter.getName())
+		.countryId(fromFilter.getCountryId())
+		.applicationId(userAppId)
+		.organizationId(userOrgId)
+		.build();
+
+	}
 
 }
